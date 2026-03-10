@@ -1,33 +1,29 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '~/stores/auth'
+import type { DivisionFull } from '~/types/index'
 
 const router = useRouter()
-const auth = useAuthStore()
 
 const title = ref('')
 const loading = ref(false)
-const error = ref('')
 
-async function start() {
+function start() {
   if (!title.value.trim()) return
   loading.value = true
-  error.value = ''
-
-  try {
-    if (!auth.guestToken) auth.initGuestSession()
-    const data = await $fetch<{ id: string }>('/api/divisions', {
-      method: 'POST',
-      body: { title: title.value.trim() },
-      headers: auth.guestToken ? { Authorization: `Bearer ${auth.guestToken}` } : {},
-    })
-    router.push(`/division/${data.id}`)
-  } catch (e: any) {
-    error.value = e.data?.statusMessage ?? 'Error al crear la división'
-  } finally {
-    loading.value = false
+  const id = crypto.randomUUID()
+  const division: DivisionFull = {
+    id,
+    title: title.value.trim(),
+    guestToken: null,
+    createdAt: new Date().toISOString(),
+    closedAt: null,
+    participants: [],
+    expenses: [],
+    splits: [],
   }
+  localStorage.setItem(`splitr_div_${id}`, JSON.stringify(division))
+  router.push(`/division/${id}`)
 }
 </script>
 
@@ -46,7 +42,7 @@ async function start() {
       <!-- Hero -->
       <section class="hero">
         <div class="hero-eyebrow fade-up fade-up-1">
-          <span class="badge badge-gold">División de gastos</span>
+          <!-- <span class="badge badge-gold">División de gastos</span> -->
         </div>
         <h1 class="hero-title fade-up fade-up-2">
           Divide lo que<br />
@@ -58,7 +54,7 @@ async function start() {
         </p>
 
         <!-- Create division form -->
-        <form class="create-form fade-up fade-up-4" @submit.prevent="start">
+        <form class="create-form fade-up fade-up-" @submit.prevent="start">
           <div class="create-input-wrap">
             <input
               v-model="title"
@@ -71,7 +67,6 @@ async function start() {
               {{ loading ? '…' : 'Crear →' }}
             </button>
           </div>
-          <p v-if="error" class="form-error">{{ error }}</p>
         </form>
 
       </section>

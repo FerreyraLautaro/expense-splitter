@@ -1,28 +1,4 @@
-/**
- * Debt minimization (settlement) algorithm.
- *
- * Given a map of participantId → net balance (positive = owed money, negative = owes money),
- * returns the minimum set of transfers to settle all debts.
- *
- * Uses a greedy approach: repeatedly match the largest creditor with the largest debtor.
- * This is optimal for the common case and runs in O(n log n).
- */
-
-export interface Transfer {
-  fromId: string
-  fromName: string
-  toId: string
-  toName: string
-  amount: number
-}
-
-export interface ParticipantBalance {
-  id: string
-  name: string
-  totalPaid: number
-  totalOwed: number
-  net: number // positive = is owed; negative = owes
-}
+import type { ParticipantBalance, Transfer } from '~/types/index'
 
 export function computeBalances(
   participants: { id: string; name: string }[],

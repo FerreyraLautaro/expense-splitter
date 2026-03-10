@@ -1,94 +1,111 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { useAuthStore } from './auth'
-import type { DivisionFull, Category, ParticipantBalance, Transfer, CreateExpenseDto } from '~/types/index'
+import type { DivisionFull, ParticipantBalance, Transfer, CreateExpenseDto } from '~/types/index'
+import { computeBalances, computeSettlement } from '~/utils/settlement'
+
+const STORAGE_PREFIX = 'splitr_div_'
 
 export const useDivisionStore = defineStore('division', () => {
   const division = ref<DivisionFull | null>(null)
-  const categories = ref<Category[]>([])
   const settlement = ref<{ balances: ParticipantBalance[]; transfers: Transfer[] } | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  function authHeaders(): Record<string, string> {
-    const auth = useAuthStore()
-    return auth.guestToken ? { Authorization: `Bearer ${auth.guestToken}` } : {}
+  function save() {
+    if (division.value) {
+      localStorage.setItem(STORAGE_PREFIX + division.value.id, JSON.stringify(division.value))
+    }
   }
 
-  async function load(id: string) {
+  function load(id: string) {
     loading.value = true
     error.value = null
     try {
-      const [div, cats] = await Promise.all([
-        $fetch<DivisionFull>(`/api/divisions/${id}`, { headers: authHeaders() }),
-        $fetch<Category[]>('/api/categories'),
-      ])
-      division.value = div
-      categories.value = cats
-    } catch (e: any) {
-      error.value = e.data?.statusMessage ?? e.data?.error ?? 'Error al cargar la división'
+      const raw = localStorage.getItem(STORAGE_PREFIX + id)
+      if (!raw) {
+        error.value = 'División no encontrada'
+        return
+      }
+      division.value = JSON.parse(raw)
+    } catch {
+      error.value = 'Error al cargar la división'
     } finally {
       loading.value = false
     }
   }
 
-  async function loadSettlement(id: string) {
-    const data = await $fetch<{ balances: ParticipantBalance[]; transfers: Transfer[] }>(
-      `/api/divisions/${id}/settlement`,
-      { headers: authHeaders() }
-    )
-    settlement.value = data
+  function loadSettlement() {
+    if (!division.value) return
+    const { participants, expenses, splits } = division.value
+    const balances = computeBalances(participants, expenses, splits)
+    const transfers = computeSettlement(balances)
+    settlement.value = { balances, transfers }
   }
 
-  async function addParticipant(name: string) {
+  function addParticipant(name: string) {
     if (!division.value) return
-    const participant = await $fetch<{ id: string; divisionId: string; name: string; alias: string | null }>(
-      `/api/divisions/${division.value.id}/participants`,
-      { method: 'POST', body: { name }, headers: authHeaders() }
-    )
-    division.value.participants.push(participant)
+    division.value.participants.push({
+      id: crypto.randomUUID(),
+      divisionId: division.value.id,
+      name,
+      alias: null,
+    })
+    save()
   }
 
-  async function updateAlias(participantId: string, alias: string | null) {
+  function updateAlias(participantId: string, alias: string | null) {
     if (!division.value) return
-    await $fetch(
-      `/api/divisions/${division.value.id}/participants/${participantId}`,
-      { method: 'PATCH', body: { alias }, headers: authHeaders() }
-    )
     const p = division.value.participants.find((p) => p.id === participantId)
     if (p) p.alias = alias
+    save()
   }
 
-  async function removeParticipant(participantId: string) {
+  function removeParticipant(participantId: string) {
     if (!division.value) return
-    await $fetch(
-      `/api/divisions/${division.value.id}/participants/${participantId}`,
-      { method: 'DELETE', headers: authHeaders() }
+    const removedExpenseIds = new Set(
+      division.value.expenses.filter((e) => e.paidBy === participantId).map((e) => e.id),
     )
     division.value.participants = division.value.participants.filter((p) => p.id !== participantId)
     division.value.expenses = division.value.expenses.filter((e) => e.paidBy !== participantId)
+    division.value.splits = division.value.splits.filter(
+      (s) => !removedExpenseIds.has(s.expenseId) && s.participantId !== participantId,
+    )
+    save()
   }
 
-  async function addExpense(data: CreateExpenseDto) {
+  function addExpense(data: CreateExpenseDto) {
     if (!division.value) return
-    const expense = await $fetch<{ id: string; divisionId: string; categoryId: string | null; description: string | null; amount: number; paidBy: string; createdAt: string; splits: any[] }>(
-      `/api/divisions/${division.value.id}/expenses`,
-      { method: 'POST', body: data, headers: authHeaders() }
-    )
-    division.value.expenses.push(expense)
-    if (expense.splits) {
-      division.value.splits.push(...expense.splits)
+    const expenseId = crypto.randomUUID()
+    const amountOwed = data.amount / data.includedParticipantIds.length
+
+    division.value.expenses.push({
+      id: expenseId,
+      divisionId: division.value.id,
+      categoryId: null,
+      description: data.description ?? null,
+      amount: data.amount,
+      paidBy: data.paidBy,
+      createdAt: new Date().toISOString(),
+      splits: [],
+    })
+
+    for (const participantId of data.includedParticipantIds) {
+      division.value.splits.push({
+        id: crypto.randomUUID(),
+        expenseId,
+        participantId,
+        amountOwed,
+      })
     }
+
+    save()
   }
 
-  async function removeExpense(expenseId: string) {
+  function removeExpense(expenseId: string) {
     if (!division.value) return
-    await $fetch(
-      `/api/divisions/${division.value.id}/expenses/${expenseId}`,
-      { method: 'DELETE', headers: authHeaders() }
-    )
     division.value.expenses = division.value.expenses.filter((e) => e.id !== expenseId)
     division.value.splits = division.value.splits.filter((s) => s.expenseId !== expenseId)
+    save()
   }
 
   function reset() {
@@ -97,5 +114,5 @@ export const useDivisionStore = defineStore('division', () => {
     error.value = null
   }
 
-  return { division, categories, settlement, loading, error, load, loadSettlement, addParticipant, updateAlias, removeParticipant, addExpense, removeExpense, reset }
+  return { division, settlement, loading, error, load, loadSettlement, addParticipant, updateAlias, removeParticipant, addExpense, removeExpense, reset }
 })

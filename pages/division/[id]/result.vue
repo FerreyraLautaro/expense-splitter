@@ -9,10 +9,10 @@ const { public: { appAlias } } = useRuntimeConfig()
 
 const copied = ref(false)
 
-onMounted(async () => {
+onMounted(() => {
   const id = route.params.id as string
-  if (!store.division) await store.load(id)
-  await store.loadSettlement(id)
+  if (!store.division) store.load(id)
+  store.loadSettlement()
 })
 
 // Helper: get alias for a participant id
@@ -47,7 +47,7 @@ const whatsappText = computed(() => {
   text += `\n💰 Total gastado: *$${fmt(total)}*\n`
   if (appAlias) {
     text += `\n—\n`
-    text += `_Dividí con splitr ✦ — si querés colaborar, mi alias es: *${appAlias}* ✨_`
+    text += `_Dividí con splitr ✦ — si querés colaborar, mi alias es: \`${appAlias}\` ✨_`
   }
 
   return text

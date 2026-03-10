@@ -90,7 +90,7 @@ function goToResult() {
                 <input
                   v-model="newName"
                   type="text"
-                  placeholder="ej: Joaco, Lauti, Pela…"
+                  placeholder="ej: Pablo, Lu, Rama.."
                   maxlength="80"
                   autocomplete="off"
                   @keyup.enter="addParticipant"
