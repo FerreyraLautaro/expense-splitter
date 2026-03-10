@@ -163,7 +163,7 @@ async function start() {
 .hero-sub {
   font-size: 17px;
   line-height: 1.7;
-  margin-bottom: 40px;
+  margin-bottom: 48px;
 }
 
 /* Create form */
@@ -197,31 +197,32 @@ async function start() {
 
 /* How it works */
 .how-section {
-  padding-top: 8px;
+  padding-top: 16px;
 }
 
 .steps {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
 }
 
 .step {
   display: flex;
   align-items: flex-start;
-  gap: 20px;
+  gap: 24px;
 }
 
 .step-num {
   font-size: 12px;
   letter-spacing: 2px;
   min-width: 28px;
-  padding-top: 2px;
+  padding-top: 3px;
 }
 
 .step-text {
   color: var(--text-secondary);
-  font-size: 15px;
+  font-size: 16px;
+  line-height: 1.5;
 }
 
 @media (max-width: 520px) {

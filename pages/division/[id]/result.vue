@@ -5,6 +5,7 @@ import { useDivisionStore } from '~/stores/division'
 
 const route = useRoute()
 const store = useDivisionStore()
+const { public: { appAlias } } = useRuntimeConfig()
 
 const copied = ref(false)
 
@@ -44,8 +45,10 @@ const whatsappText = computed(() => {
   }
 
   text += `\n💰 Total gastado: *$${fmt(total)}*\n`
-  text += `\n—\n`
-  text += `_¡Espero que disfrutes la app! Si querés colaborar, mi alias es: *mi.alias* ✨_`
+  if (appAlias) {
+    text += `\n—\n`
+    text += `_Dividí con splitr ✦ — si querés colaborar, mi alias es: *${appAlias}* ✨_`
+  }
 
   return text
 })

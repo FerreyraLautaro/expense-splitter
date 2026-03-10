@@ -252,7 +252,7 @@ const totalPaid = computed(() => props.expenses.reduce((s, e) => s + e.amount, 0
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: 18px 20px;
   cursor: pointer;
   user-select: none;
   transition: background var(--transition);
@@ -268,11 +268,11 @@ const totalPaid = computed(() => props.expenses.reduce((s, e) => s + e.amount, 0
 }
 
 .p-chevron {
-  color: var(--text-muted);
-  font-size: 18px;
-  transition: transform var(--transition);
+  color: var(--text-secondary);
+  font-size: 20px;
+  transition: transform var(--transition), color var(--transition);
   line-height: 1;
-  width: 16px;
+  width: 18px;
   flex-shrink: 0;
 }
 .p-chevron.rotated { transform: rotate(90deg); color: var(--accent); }
@@ -280,14 +280,14 @@ const totalPaid = computed(() => props.expenses.reduce((s, e) => s + e.amount, 0
 .p-name { font-size: 16px; font-weight: 500; flex-shrink: 0; }
 
 .p-alias {
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.5px;
   border: 1px solid var(--border);
   border-radius: 4px;
-  padding: 2px 6px;
+  padding: 2px 8px;
 }
 
-.p-expense-count { font-size: 10px; padding: 3px 8px; }
+.p-expense-count { font-size: 11px; padding: 3px 8px; }
 
 .p-header-right {
   display: flex;
@@ -315,10 +315,10 @@ const totalPaid = computed(() => props.expenses.reduce((s, e) => s + e.amount, 0
 /* Body */
 .p-body {
   border-top: 1px solid var(--border);
-  padding: 16px 20px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 /* Alias */
@@ -383,15 +383,15 @@ const totalPaid = computed(() => props.expenses.reduce((s, e) => s + e.amount, 0
   background: var(--surface-2);
   border: 1px solid var(--border-light);
   border-radius: var(--radius);
-  padding: 16px;
+  padding: 18px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
-.add-form-row { display: flex; gap: 12px; align-items: flex-end; }
-.add-field { display: flex; flex-direction: column; gap: 6px; }
+.add-form-row { display: flex; gap: 14px; align-items: flex-end; }
+.add-field { display: flex; flex-direction: column; gap: 8px; }
 .add-field label {
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 2px;
   text-transform: uppercase;
   color: var(--text-secondary);
@@ -433,7 +433,7 @@ const totalPaid = computed(() => props.expenses.reduce((s, e) => s + e.amount, 0
 .split-preview { font-size: 13px; }
 .form-error { color: var(--red); font-size: 12px; font-family: var(--font-mono); flex: 1; }
 .add-actions { display: flex; gap: 8px; margin-left: auto; }
-.btn-sm { padding: 8px 16px; font-size: 11px; }
+.btn-sm { padding: 9px 18px; font-size: 12px; }
 
 .empty-hint { text-align: center; padding: 8px 0; }
 

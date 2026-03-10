@@ -148,7 +148,7 @@ function goToResult() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 32px 0 40px;
+  padding: 32px 0 44px;
 }
 
 .back-link {
@@ -164,7 +164,7 @@ function goToResult() {
 .state-msg { padding: 48px 0; font-size: 14px; }
 
 .div-title-row {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 .div-title { font-size: clamp(1.6rem, 4vw, 2.4rem); }
 
@@ -172,33 +172,33 @@ function goToResult() {
 .summary-bar {
   display: flex;
   align-items: center;
-  padding: 14px 24px;
-  margin-bottom: 28px;
+  padding: 18px 24px;
+  margin-bottom: 32px;
 }
 .summary-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   flex: 1;
   text-align: center;
 }
-.summary-item .mono { font-size: 13px; }
-.summary-item .accent { font-size: 16px; font-weight: 500; }
-.summary-sep { width: 1px; height: 32px; background: var(--border); }
+.summary-item .mono { font-size: 12px; letter-spacing: 1.5px; }
+.summary-item .accent { font-size: 18px; font-weight: 500; }
+.summary-sep { width: 1px; height: 36px; background: var(--border); }
 
 /* Add participant */
 .add-participant-form {
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
 .field label {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 2px;
   text-transform: uppercase;
   color: var(--text-secondary);
   font-family: var(--font-mono);
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .input-row {

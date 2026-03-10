@@ -16,7 +16,7 @@ import { NuxtModule, ModuleDependencyMeta } from '@nuxt/schema'
    },
   }
   interface SharedPublicRuntimeConfig {
-
+   appAlias: string,
   }
 declare module '@nuxt/schema' {
   interface ModuleDependencies {

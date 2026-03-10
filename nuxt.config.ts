@@ -3,4 +3,9 @@ export default defineNuxtConfig({
   modules: ['@pinia/nuxt'],
   css: ['~/assets/main.css'],
   compatibilityDate: '2025-01-01',
+  runtimeConfig: {
+    public: {
+      appAlias: '',
+    },
+  },
 })
