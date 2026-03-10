@@ -8,7 +8,7 @@
 
 1. **Creás una división** (ej: "Cena del viernes")
 2. **Sumás participantes** y cargás gastos inline en la card de cada uno
-3. **Excluís personas** por gasto si alguien no participó
+3. **Excluís personas** por gasto si alguien no participó 
 4. **El algoritmo calcula** el set mínimo de transferencias para saldar todo
 
 ![División](division.png)
