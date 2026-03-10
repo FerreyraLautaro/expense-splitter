@@ -8,42 +8,43 @@
 └─────────────────────────────────┬───────────────────────────────────┘
                                   │
               ┌───────────────────▼──────────────────┐
-              │            HomeView (/)              │
-              │   Ingresa nombre de división         │
-              │   ┌────────────┐  ┌───────────────┐ │
-              │   │  Invitado  │  │ Iniciar sesión│ │
-              │   │ (6h local) │  │ (email + OTP) │ │
-              │   └─────┬──────┘  └──────┬────────┘ │
-              └─────────┼────────────────┼───────────┘
-                        │                │
-                        └────────┬───────┘
-                                 │ POST /api/divisions
-                                 ▼
-              ┌──────────────────────────────────────┐
-              │         DivisionView (/division/:id) │
-              │                                      │
+              │              index.vue (/)            │
+              │                                       │
+              │   Ingresa nombre de división          │
+              │   → click "Crear →"                   │
+              │   → crypto.randomUUID() como id       │
+              │   → guarda en localStorage            │
+              │   → navega a /division/:id            │
+              └───────────────────┬───────────────────┘
+                                  │
+              ┌───────────────────▼──────────────────┐
+              │     division/[id]/index.vue           │
+              │                                       │
               │  1. Agregar participantes             │
               │     → input name + Enter             │
-              │     → POST /api/.../participants     │
-              │                                      │
+              │     → store.addParticipant()          │
+              │     → guarda en localStorage          │
+              │                                       │
               │  2. Expandir card de participante    │
-              │     → ingresar alias (blur → PATCH)  │
+              │     → ingresar alias CBU (blur save) │
               │     → click "+" para agregar gasto   │
-              │                                      │
+              │                                       │
               │  3. Inline expense form              │
               │     → monto + descripción            │
               │     → excluir participantes (chips)  │
-              │     → preview: $X c/u × N pers.      │
+              │     → preview: $X c/u × N pers.     │
               │     → "✓ Guardar"                    │
-              │     → POST /api/.../expenses         │
-              │                                      │
-              └──────────────────┬───────────────────┘
-                                 │ click "Ver resultado →"
-                                 ▼
+              │     → store.addExpense()              │
+              │     → guarda en localStorage          │
+              │                                       │
+              └───────────────────┬───────────────────┘
+                                  │ click "Ver resultado →"
+                                  ▼
               ┌──────────────────────────────────────┐
-              │     ResultView (/division/:id/result)│
+              │   division/[id]/result.vue           │
               │                                      │
-              │  GET /api/divisions/:id/settlement   │
+              │  computeBalances() client-side        │
+              │  computeSettlement() client-side      │
               │                                      │
               │  ┌────────────────────────────────┐  │
               │  │   TRANSFERENCIAS MÍNIMAS       │  │
@@ -57,12 +58,9 @@
               │  [📋 Copiar para WhatsApp]           │
               │   → genera texto con formato *bold*  │
               │   → incluye alias del acreedor       │
-              │   → mensaje de colaboración          │
               │                                      │
               │  BALANCE POR PERSONA                 │
               │  Luis  +$450  │ Joaco -$150 │ ...    │
-              │                                      │
-              │  [+ Guardar contacto] (usuarios reg) │
               └──────────────────────────────────────┘
 ```
 
@@ -71,53 +69,18 @@
 ## Modelo de relaciones
 
 ```
-users ──────────────────────────────────────────────────────┐
-  │ 1                                                        │ 1
-  │ N                                                        │ N
-divisions ◄──── guest_token (acceso invitado)            contacts
+DivisionFull (localStorage)
   │ 1
   │ N
   ├── participants ──── alias (CBU alias, opcional)
   │     │ 1
-  │     │ N (paid_by)
+  │     │ N (paidBy)
   │     └── expenses
   │               │ 1
   │               │ N
-  │               └── expense_splits
+  │               └── expense_splits (solo incluidos)
   │                     │ N
-  │                     └──── participants (included only)
-  │
-  └── [categories] ← tabla seed, referenciada en expenses (actualmente sin uso en UI)
-```
-
----
-
-## Flujo de autenticación OTP
-
-```
-Browser                    Backend                    Resend
-  │                           │                          │
-  │── POST /auth/send-otp ──►│                          │
-  │   { email }               │── genera código 6 dig.  │
-  │                           │── hashea (SHA-256)      │
-  │                           │── guarda en DB (10min)  │
-  │                           │── POST emails ─────────►│
-  │                           │                          │── envía mail
-  │◄── { message: "ok" } ────│                          │
-  │                           │                          │
-  [usuario recibe mail y escribe código]
-  │                           │
-  │── POST /auth/verify-otp ─►│
-  │   { email, code }         │── hashea code recibido
-  │                           │── busca en DB (no usado, no expirado)
-  │                           │── marca como usado
-  │                           │── busca o crea usuario
-  │                           │── genera JWT (30 días)
-  │◄── { token, user } ──────│
-  │                           │
-  [guarda token en localStorage]
-  │
-  [requests siguientes: Authorization: Bearer <token>]
+  │                     └──── participants
 ```
 
 ---

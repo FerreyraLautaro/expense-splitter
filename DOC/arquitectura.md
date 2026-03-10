@@ -4,124 +4,82 @@
 
 Splitr es una aplicación web de división de gastos. Permite crear una "división", agregar participantes, registrar gastos (con exclusiones por persona), y calcular el mínimo de transferencias necesarias para saldar todas las deudas.
 
+**Todo corre en el browser — sin backend, sin base de datos, sin autenticación.**
+
 ---
 
 ## Stack tecnológico
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                    CLIENTE (Browser)                │
+│                    BROWSER (SPA)                    │
 │                                                     │
-│  Vue 3 + Vite  │  Pinia (estado)  │  Vue Router    │
-│  Axios (HTTP)  │  localStorage (guest/auth token)  │
-└──────────────────────────┬──────────────────────────┘
-                           │ HTTP/JSON  (/api/*)
-                           │ Proxy Vite en dev
-                           │ (5173 → 3000)
-┌──────────────────────────▼──────────────────────────┐
-│                   BACKEND (Node.js)                 │
-│                                                     │
-│  Express 4  │  TypeScript (tsx)  │  Drizzle ORM    │
-│  jose (JWT)  │  Zod (validación) │  Resend (email) │
-└──────────────────────────┬──────────────────────────┘
-                           │
-┌──────────────────────────▼──────────────────────────┐
-│                    BASE DE DATOS                    │
-│                                                     │
-│  SQLite (MVP)  →  Turso/libSQL (producción)        │
-│  Driver: @libsql/client (sin compilación nativa)   │
+│  Nuxt 3 (ssr: false)  │  Pinia (estado global)     │
+│  Vue Router           │  localStorage (datos)       │
+│  utils/settlement.ts  ← algoritmo greedy            │
 └─────────────────────────────────────────────────────┘
 ```
 
+No hay servidor de aplicación ni base de datos. Todo el estado se persiste en `localStorage` del navegador bajo la clave `splitr_div_<uuid>`.
+
 ---
 
-## Modelo de datos
+## Modelo de datos (en memoria / localStorage)
 
 ```
-users
-  id (PK, UUID)
-  email (unique)
-  created_at
-
-otp_codes
-  id (PK)
-  email
-  code_hash (SHA-256)
-  expires_at (~10 min)
-  used (bool)
-
-divisions
-  id (PK, UUID)
+DivisionFull
+  id          (UUID, generado en cliente)
   title
-  owner_user_id (FK users, nullable — null = invitado)
-  guest_token   (nullable — token del invitado)
-  created_at
-  closed_at
+  createdAt
+  closedAt    (nullable)
+  guestToken  (nullable, legacy — actualmente sin uso)
+  participants[]
+  expenses[]
+  splits[]
 
-participants
-  id (PK, UUID)
-  division_id (FK divisions)
+Participant
+  id          (UUID)
+  divisionId
   name
-  alias         ← CBU alias para recibir transferencias (opcional)
-  contact_id (FK contacts, nullable)
+  alias       (CBU alias para transferencias, opcional)
 
-expenses
-  id (PK, UUID)
-  division_id (FK divisions)
+Expense
+  id          (UUID)
+  divisionId
   description (nullable)
   amount
-  paid_by (FK participants)
-  created_at
+  paidBy      (participantId)
+  createdAt
 
-expense_splits                        ← solo participantes INCLUIDOS
-  id (PK)
-  expense_id (FK expenses)
-  participant_id (FK participants)
-  amount_owed   ← precalculado: amount / cantidad_incluidos
-
-contacts                              ← directorio personal (usuarios registrados)
-  id (PK)
-  owner_user_id (FK users)
-  name
-  created_at
-
-categories                            ← tabla seed, mantenida para uso futuro
-  id, name, icon
+ExpenseSplit                    ← solo participantes INCLUIDOS
+  id          (UUID)
+  expenseId
+  participantId
+  amountOwed  ← precalculado: amount / cantidad_incluidos
 ```
 
 ---
 
-## Flujo de autenticación
+## Flujo de datos
 
 ```
-USUARIO REGISTRADO
-──────────────────
-1. POST /api/auth/send-otp  { email }
-   → genera código 6 dígitos, lo hashea (SHA-256), lo guarda con TTL 10min
-   → envía email vía Resend
+Usuario crea división
+  → crypto.randomUUID() como id
+  → guarda DivisionFull en localStorage
 
-2. POST /api/auth/verify-otp  { email, code }
-   → verifica hash, marca como usado
-   → crea usuario si no existe
-   → retorna JWT (30 días, HS256)
+Usuario agrega participante / gasto
+  → store muta el objeto en memoria
+  → llama save() → localStorage.setItem(...)
 
-3. Requests siguientes: Authorization: Bearer <jwt>
-   → middleware parseAuth verifica JWT y setea req.auth
-
-INVITADO
-────────
-1. Frontend genera guest_<uuid> localmente
-2. Lo guarda en localStorage con timestamp de expiración (6h)
-3. Authorization: Bearer guest_<uuid>
-   → middleware parseAuth detecta el prefijo "guest_"
-   → setea req.guestToken
-4. Divisiones creadas por invitado almacenan el guest_token
-   → acceso scoped: solo quien tenga ese token puede ver/editar
+Usuario navega a /result
+  → store llama loadSettlement()
+  → computeBalances() + computeSettlement() (client-side)
+  → renderiza transferencias
 ```
 
 ---
 
-## Algoritmo de settlement (minimización de deudas)
+## Algoritmo de settlement (utils/settlement.ts)
 
 ```
 ENTRADA: lista de participantes con sus balances netos
@@ -144,46 +102,7 @@ PROCESO:
 
 SALIDA: lista mínima (o near-mínima) de transferencias
 
-COMPLEJIDAD: O(n log n) — óptimo para el caso promedio
-```
-
----
-
-## Endpoints REST
-
-```
-AUTH
-  POST /api/auth/send-otp          → envía OTP al email
-  POST /api/auth/verify-otp        → verifica OTP, retorna JWT
-  GET  /api/auth/me                → info del usuario (auth required)
-
-DIVISIONS
-  POST   /api/divisions            → crear división (user o guest)
-  GET    /api/divisions            → listar divisiones del usuario (auth required)
-  GET    /api/divisions/:id        → división completa (participants + expenses + splits)
-  PATCH  /api/divisions/:id        → actualizar título
-  DELETE /api/divisions/:id        → eliminar
-
-PARTICIPANTS
-  POST   /api/divisions/:id/participants       → agregar participante
-  PATCH  /api/divisions/:id/participants/:pid  → actualizar alias
-  DELETE /api/divisions/:id/participants/:pid  → quitar participante
-
-EXPENSES
-  POST   /api/divisions/:id/expenses/:eid  → agregar gasto con splits
-  DELETE /api/divisions/:id/expenses/:eid  → eliminar gasto
-
-SETTLEMENT
-  GET /api/divisions/:id/settlement  → balances + transferencias mínimas
-
-CONTACTS (auth required)
-  GET    /api/contacts     → listar contactos del usuario
-  POST   /api/contacts     → guardar contacto
-  DELETE /api/contacts/:id → eliminar contacto
-
-MISC
-  GET /api/categories      → lista de categorías (seed)
-  GET /api/health          → health check
+COMPLEJIDAD: O(n log n)
 ```
 
 ---
@@ -196,37 +115,27 @@ expense-splitter/
 ├── DOC/                         ← esta documentación
 │   ├── arquitectura.md
 │   └── diagrama.md
-├── backend/
-│   ├── .env.example
-│   ├── drizzle.config.ts
-│   ├── drizzle/                 ← migraciones SQL auto-generadas
-│   ├── data/                    ← db.sqlite (gitignored)
-│   └── src/
-│       ├── index.ts             ← entry point: Express + migrations + seed
-│       ├── db/
-│       │   ├── schema.ts        ← fuente de verdad del modelo de datos
-│       │   └── index.ts         ← conexión libSQL + instancia Drizzle
-│       ├── middleware/auth.ts   ← parseAuth + requireAuth
-│       ├── routes/              ← un archivo por dominio
-│       └── services/
-│           ├── settlement.ts    ← algoritmo greedy
-│           ├── otp.ts           ← generación y verificación de códigos
-│           └── email.ts         ← Resend
-└── frontend/
-    ├── index.html               ← imports Google Fonts (Cormorant Garamond, DM Sans, DM Mono)
-    ├── vite.config.ts           ← proxy /api → :3000
-    └── src/
-        ├── assets/main.css      ← design tokens "The Ledger"
-        ├── api/index.ts         ← Axios + tipos TypeScript compartidos
-        ├── router/index.ts
-        ├── stores/
-        │   ├── auth.ts          ← sesión usuario + guest (localStorage)
-        │   └── division.ts      ← estado división activa
-        ├── views/
-        │   ├── HomeView.vue     ← landing + crear división
-        │   ├── AuthView.vue     ← email → OTP
-        │   ├── DivisionView.vue ← vista principal (cards sin tabs)
-        │   └── ResultView.vue   ← resultado + copy WhatsApp
-        └── components/
-            └── ParticipantCard.vue ← card expandible con alias + gastos inline
+├── nuxt.config.ts               ← ssr: false, @pinia/nuxt, global CSS
+├── app.vue                      ← root de la app
+├── assets/main.css              ← design tokens "The Ledger"
+├── types/index.ts               ← interfaces TypeScript compartidas
+├── utils/
+│   └── settlement.ts            ← computeBalances + computeSettlement
+├── stores/
+│   └── division.ts              ← estado + mutaciones + localStorage I/O
+├── pages/
+│   ├── index.vue                ← landing + crear división
+│   └── division/[id]/
+│       ├── index.vue            ← participantes + formulario de gastos
+│       └── result.vue           ← settlement + alias + copy WhatsApp
+└── components/
+    └── ParticipantCard.vue      ← card expandible: alias + expense form + exclusiones
 ```
+
+---
+
+## Deploy
+
+- **Plataforma**: Vercel (Nuxt 3 auto-detectado)
+- **Build**: `nuxt build` (SPA estático)
+- **Sin variables de entorno requeridas** — todo es client-side
