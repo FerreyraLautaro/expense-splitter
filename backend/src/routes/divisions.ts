@@ -4,21 +4,15 @@ import { randomUUID } from 'crypto'
 import { db } from '../db/index.js'
 import { divisions, participants, expenses, expenseSplits } from '../db/schema.js'
 import { eq, and, inArray } from 'drizzle-orm'
-import { requireAuth } from '../middleware/auth.js'
 import { computeBalances, computeSettlement } from '../services/settlement.js'
 
 const router = Router()
 
-// Helper: check ownership (user or guest)
-async function getDivision(id: string, req: { auth?: { userId: string }; guestToken?: string }) {
+// Helper: check ownership by guestToken
+async function getDivision(id: string, req: { guestToken?: string }) {
   const [division] = await db.select().from(divisions).where(eq(divisions.id, id)).limit(1)
   if (!division) return null
-
-  const isOwner =
-    (req.auth && division.ownerUserId === req.auth.userId) ||
-    (req.guestToken && division.guestToken === req.guestToken)
-
-  return isOwner ? division : null
+  return division.guestToken === req.guestToken ? division : null
 }
 
 // POST /api/divisions
@@ -31,29 +25,15 @@ router.post('/', async (req, res) => {
   }
 
   const id = randomUUID()
-  const now = new Date()
-
   await db.insert(divisions).values({
     id,
     title: parsed.data.title,
-    ownerUserId: req.auth?.userId ?? null,
     guestToken: req.guestToken ?? null,
-    createdAt: now,
+    createdAt: new Date(),
   })
 
   const [division] = await db.select().from(divisions).where(eq(divisions.id, id)).limit(1)
   res.status(201).json(division)
-})
-
-// GET /api/divisions — list for authenticated user
-router.get('/', requireAuth, async (req, res) => {
-  const list = await db
-    .select()
-    .from(divisions)
-    .where(eq(divisions.ownerUserId, req.auth!.userId))
-    .orderBy(divisions.createdAt)
-
-  res.json(list)
 })
 
 // GET /api/divisions/:id — full division with participants, expenses and splits
@@ -132,11 +112,7 @@ router.post('/:id/participants', async (req, res) => {
   }
 
   const id = randomUUID()
-  await db.insert(participants).values({
-    id,
-    divisionId: division.id,
-    name: parsed.data.name,
-  })
+  await db.insert(participants).values({ id, divisionId: division.id, name: parsed.data.name })
 
   const [participant] = await db.select().from(participants).where(eq(participants.id, id)).limit(1)
   res.status(201).json(participant)
@@ -162,7 +138,11 @@ router.patch('/:id/participants/:pid', async (req, res) => {
     .set({ alias: parsed.data.alias })
     .where(and(eq(participants.id, req.params.pid), eq(participants.divisionId, division.id)))
 
-  const [participant] = await db.select().from(participants).where(eq(participants.id, req.params.pid)).limit(1)
+  const [participant] = await db
+    .select()
+    .from(participants)
+    .where(eq(participants.id, req.params.pid))
+    .limit(1)
   res.json(participant)
 })
 
@@ -176,9 +156,7 @@ router.delete('/:id/participants/:pid', async (req, res) => {
 
   await db
     .delete(participants)
-    .where(
-      and(eq(participants.id, req.params.pid), eq(participants.divisionId, division.id)),
-    )
+    .where(and(eq(participants.id, req.params.pid), eq(participants.divisionId, division.id)))
 
   res.status(204).end()
 })

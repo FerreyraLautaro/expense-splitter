@@ -11,17 +11,6 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// ─── Auth ─────────────────────────────────────────────────────────────────────
-export const authApi = {
-  sendOtp: (email: string) => api.post('/auth/send-otp', { email }),
-  verifyOtp: (email: string, code: string) =>
-    api.post<{ token: string; user: { id: string; email: string } }>('/auth/verify-otp', {
-      email,
-      code,
-    }),
-  me: () => api.get<{ id: string; email: string }>('/auth/me'),
-}
-
 // ─── Categories ───────────────────────────────────────────────────────────────
 export const categoriesApi = {
   list: () => api.get<Category[]>('/categories'),
@@ -52,13 +41,6 @@ export const divisionsApi = {
     api.delete(`/divisions/${divisionId}/expenses/${expenseId}`),
 }
 
-// ─── Contacts ─────────────────────────────────────────────────────────────────
-export const contactsApi = {
-  list: () => api.get<Contact[]>('/contacts'),
-  create: (name: string) => api.post<Contact>('/contacts', { name }),
-  delete: (id: string) => api.delete(`/contacts/${id}`),
-}
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface Category {
   id: string
@@ -69,7 +51,7 @@ export interface Category {
 export interface Division {
   id: string
   title: string
-  ownerUserId: string | null
+  guestToken: string | null
   createdAt: string
   closedAt: string | null
 }
@@ -79,7 +61,6 @@ export interface Participant {
   divisionId: string
   name: string
   alias: string | null
-  contactId: string | null
 }
 
 export interface ExpenseSplit {
@@ -122,12 +103,6 @@ export interface Transfer {
   amount: number
 }
 
-export interface Contact {
-  id: string
-  ownerUserId: string
-  name: string
-  createdAt: string
-}
 
 export interface CreateExpenseDto {
   description?: string

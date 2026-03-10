@@ -15,6 +15,13 @@
       "when": 1773085109417,
       "tag": "0001_absurd_swarm",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1773177824039,
+      "tag": "0002_lush_nicolaos",
+      "breakpoints": true
     }
   ]
 }

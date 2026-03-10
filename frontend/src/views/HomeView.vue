@@ -17,11 +17,7 @@ async function start() {
   error.value = ''
 
   try {
-    // Ensure a session exists (user or guest)
-    if (!auth.isLoggedIn && !auth.isGuest) {
-      auth.initGuestSession()
-    }
-
+    if (!auth.guestToken) auth.initGuestSession()
     const { data } = await divisionsApi.create(title.value.trim())
     router.push(`/division/${data.id}`)
   } catch (e: any) {
@@ -41,15 +37,7 @@ async function start() {
           <span class="logo-mark">✦</span>
           <span class="logo-text">splitr</span>
         </div>
-        <nav class="nav">
-          <template v-if="auth.isLoggedIn">
-            <span class="nav-email mono muted">{{ auth.user?.email }}</span>
-            <button class="btn btn-ghost btn-sm" @click="auth.logout">salir</button>
-          </template>
-          <template v-else>
-            <RouterLink to="/auth" class="btn btn-ghost btn-sm">iniciar sesión</RouterLink>
-          </template>
-        </nav>
+        <nav class="nav"></nav>
       </header>
 
       <!-- Hero -->
@@ -83,12 +71,6 @@ async function start() {
           <p v-if="error" class="form-error">{{ error }}</p>
         </form>
 
-        <!-- Guest notice -->
-        <p v-if="!auth.isLoggedIn" class="guest-notice fade-up muted">
-          Entrás como invitado — tu sesión dura 6 horas.
-          <RouterLink to="/auth" class="accent">Iniciá sesión</RouterLink>
-          para guardar contactos y acceder desde cualquier dispositivo.
-        </p>
       </section>
 
       <!-- How it works -->

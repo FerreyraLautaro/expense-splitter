@@ -2,10 +2,8 @@ import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import { parseAuth } from './middleware/auth.js'
-import authRouter from './routes/auth.js'
 import divisionsRouter from './routes/divisions.js'
 import expensesRouter from './routes/expenses.js'
-import contactsRouter from './routes/contacts.js'
 import categoriesRouter from './routes/categories.js'
 import { db } from './db/index.js'
 import { categories } from './db/schema.js'
@@ -19,20 +17,16 @@ app.use(express.json())
 app.use(parseAuth)
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
-app.use('/api/auth', authRouter)
 app.use('/api/divisions', divisionsRouter)
 app.use('/api/divisions/:id/expenses', expensesRouter)
-app.use('/api/contacts', contactsRouter)
 app.use('/api/categories', categoriesRouter)
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }))
 
 // ─── Startup ──────────────────────────────────────────────────────────────────
 async function start() {
-  // Run migrations
   await migrate(db, { migrationsFolder: './drizzle' })
 
-  // Seed categories if empty
   const existing = await db.select().from(categories).limit(1)
   if (existing.length === 0) {
     await db.insert(categories).values([

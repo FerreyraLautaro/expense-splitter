@@ -7,14 +7,11 @@ import { eq, and } from 'drizzle-orm'
 
 const router = Router({ mergeParams: true })
 
-// Helper: check division ownership
-async function getDivision(id: string, req: { auth?: { userId: string }; guestToken?: string }) {
+// Helper: check division ownership by guestToken
+async function getDivision(id: string, req: { guestToken?: string }) {
   const [division] = await db.select().from(divisions).where(eq(divisions.id, id)).limit(1)
   if (!division) return null
-  const isOwner =
-    (req.auth && division.ownerUserId === req.auth.userId) ||
-    (req.guestToken && division.guestToken === req.guestToken)
-  return isOwner ? division : null
+  return division.guestToken === req.guestToken ? division : null
 }
 
 // POST /api/divisions/:id/expenses

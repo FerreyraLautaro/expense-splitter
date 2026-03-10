@@ -2,15 +2,10 @@
 import { onMounted, ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useDivisionStore } from '@/stores/division.js'
-import { useAuthStore } from '@/stores/auth.js'
-import { contactsApi } from '@/api/index.js'
-import type { ParticipantBalance } from '@/api/index.js'
 
 const route = useRoute()
 const store = useDivisionStore()
-const auth = useAuthStore()
 
-const savedContacts = ref<Set<string>>(new Set())
 const copied = ref(false)
 
 onMounted(async () => {
@@ -18,13 +13,6 @@ onMounted(async () => {
   if (!store.division) await store.load(id)
   await store.loadSettlement(id)
 })
-
-async function saveContact(balance: ParticipantBalance) {
-  try {
-    await contactsApi.create(balance.name)
-    savedContacts.value.add(balance.id)
-  } catch { /* ignore */ }
-}
 
 // Helper: get alias for a participant id
 function aliasOf(participantId: string): string | null {
@@ -173,15 +161,6 @@ const formatAmount = (n: number) => `$${Math.abs(n).toFixed(2)}`
                 </div>
               </div>
 
-              <template v-if="auth.isLoggedIn">
-                <button v-if="!savedContacts.has(b.id)" class="btn btn-ghost save-contact-btn" @click="saveContact(b)">
-                  + Guardar contacto
-                </button>
-                <span v-else class="saved-label mono">✓ Guardado</span>
-              </template>
-              <template v-else>
-                <RouterLink to="/auth" class="save-prompt muted">Iniciá sesión para guardar contacto</RouterLink>
-              </template>
             </div>
           </div>
         </section>
