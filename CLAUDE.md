@@ -13,10 +13,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | Frontend | Vue 3 + Vite + Pinia + Vue Router |
 | Backend | Node.js + Express + TypeScript (`tsx watch`) |
 | ORM | Drizzle ORM |
-| DB (MVP) | SQLite via `@libsql/client` (no native compilation needed) |
-| DB (future) | Turso (libSQL cloud) for production |
-| Email | Resend (OTP delivery) — needs verified domain configured |
-| Auth | JWT via `jose` (HS256, 30-day expiry) |
+| DB (local) | SQLite via `@libsql/client` |
+| DB (prod) | Turso (libSQL cloud) |
+| Auth | Guest sessions only — `guest_<uuid>` token, 6h TTL in localStorage |
 
 ## Commands
 
@@ -42,7 +41,6 @@ npm run build               # type-check + production build
 
 ```
 expense-splitter/
-├── DOC/                         # Architecture docs and diagrams
 ├── backend/
 │   ├── drizzle/                 # Auto-generated SQL migrations
 │   ├── data/                    # SQLite database file (gitignored)
@@ -51,28 +49,23 @@ expense-splitter/
 │   │   │   ├── schema.ts        # Drizzle table definitions (source of truth)
 │   │   │   └── index.ts         # libSQL client + drizzle instance
 │   │   ├── middleware/
-│   │   │   └── auth.ts          # parseAuth (sets req.auth or req.guestToken), requireAuth
+│   │   │   └── auth.ts          # parseAuth — sets req.guestToken from Bearer header
 │   │   ├── routes/
-│   │   │   ├── auth.ts          # POST /auth/send-otp, POST /auth/verify-otp, GET /auth/me
 │   │   │   ├── divisions.ts     # CRUD + participants (with PATCH alias) + GET /settlement
 │   │   │   ├── expenses.ts      # POST/DELETE on /divisions/:id/expenses
-│   │   │   ├── contacts.ts      # Personal contact directory (auth required)
 │   │   │   └── categories.ts    # GET /categories (seeded, kept for future use)
 │   │   ├── services/
-│   │   │   ├── settlement.ts    # computeBalances + computeSettlement (greedy debt minimization)
-│   │   │   ├── otp.ts           # createOtp / verifyOtp (SHA-256 hash, TTL-based)
-│   │   │   └── email.ts         # Resend integration for OTP emails
+│   │   │   └── settlement.ts    # computeBalances + computeSettlement (greedy debt minimization)
 │   │   └── index.ts             # Express app, migrations on startup, category seed
 │   └── drizzle.config.ts
 └── frontend/
     └── src/
         ├── api/index.ts         # Axios instance + typed API wrappers + shared TS types
         ├── stores/
-        │   ├── auth.ts          # User session + guest session (6h localStorage TTL)
+        │   ├── auth.ts          # Guest session (6h localStorage TTL)
         │   └── division.ts      # Active division state + all mutations
         ├── views/
         │   ├── HomeView.vue     # Landing + create division form
-        │   ├── AuthView.vue     # Email → OTP 2-step login
         │   ├── DivisionView.vue # Single-screen: participant cards with inline expense forms
         │   └── ResultView.vue   # Settlement + alias display + WhatsApp copy button
         └── components/
@@ -81,12 +74,10 @@ expense-splitter/
 
 ## Authentication
 
-Two modes coexist — `parseAuth` middleware handles both:
+Guest-only. `parseAuth` middleware reads `Authorization: Bearer guest_<uuid>` and sets `req.guestToken`.
 
-- **Registered user**: `Authorization: Bearer <jwt>`. JWT issued after OTP verification. Valid 30 days.
-- **Guest**: `Authorization: Bearer guest_<uuid>`. Generated client-side, stored in localStorage with a 6-hour TTL. Divisions store `guestToken` to scope access. No server-side guest session table.
-
-OTP codes are SHA-256 hashed before storage. TTL ~10 min. Old codes are invalidated on new request.
+- Token generated client-side (`crypto.randomUUID()`), stored in localStorage with 6h TTL.
+- Divisions store `guestToken` to scope access. No server-side session table.
 
 ## Key Design Decisions
 
@@ -118,8 +109,8 @@ db.select().from(expenseSplits).where(inArray(expenseSplits.expenseId, expenseId
 
 Dark forest green (`#0F1C17`), warm cream text (`#EDE8D8`), gold accents (`#D4A84B`), red/green for debt/credit. Fonts: Cormorant Garamond (display), DM Sans (body), DM Mono (numbers/labels/code). All tokens in `frontend/src/assets/main.css`.
 
-## Pending
+## Deploy
 
-- [ ] Configure Resend with verified domain and test OTP email end-to-end
-- [ ] Deploy: backend → Railway/Render, frontend → Vercel, DB → Turso
-- [ ] Contact autocomplete (registered users) — backend ready, UI pending
+- **Frontend**: Vercel — https://frontend-opal-nine-49.vercel.app
+- **Backend**: Render — https://expense-splitter-4ry1.onrender.com
+- **DB**: Turso (libSQL cloud)
