@@ -13,7 +13,7 @@
 
 ![División](division.png)
 
-![Resultado](result.png)
+![Resultado](result.png) 
 
 ## Stack
 
