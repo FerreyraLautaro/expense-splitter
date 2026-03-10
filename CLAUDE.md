@@ -4,14 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-**Splitr** — Expense splitter app. Divide expenses among people, supports per-expense exclusions, and computes the minimum number of transfers to settle all debts. MVP-first, iterative approach.
+**Splitr** — Expense splitter app. Divide expenses among people, supports per-expense exclusions, and computes the minimum number of transfers to settle all debts.
 
 ## Stack
 
 | Layer | Technology |
 |---|---|
-| Frontend | Vue 3 + Vite + Pinia + Vue Router |
-| Backend | Node.js + Express + TypeScript (`tsx watch`) |
+| Framework | Nuxt 3 (SPA mode + Nitro API routes) |
+| State | Pinia (`@pinia/nuxt`) |
 | ORM | Drizzle ORM |
 | DB (local) | SQLite via `@libsql/client` |
 | DB (prod) | Turso (libSQL cloud) |
@@ -20,97 +20,101 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-# Backend
-cd backend
-cp .env.example .env        # fill JWT_SECRET and RESEND_API_KEY
+cp .env.example .env        # fill DATABASE_URL and TURSO_AUTH_TOKEN
 npm install
+npm run db:migrate          # apply migrations (run once before dev)
+npm run dev                 # Nuxt dev server on :3000
+npm run build               # production build
 npm run db:generate         # generate migration from schema changes
-npm run db:migrate          # apply migrations (run after generate)
-npm run dev                 # tsx watch — hot reload on :3000
-
-# Frontend
-cd frontend
-npm install
-npm run dev                 # Vite dev server on :5173 (proxies /api → :3000)
-npm run build               # type-check + production build
 ```
 
-> **Important:** `DATABASE_URL` in `.env` must have `file:` prefix → `file:./data/db.sqlite`
+> **Local DB:** `DATABASE_URL=file:./data/db.sqlite` — no auth token needed.
 
 ## Project Structure
 
 ```
 expense-splitter/
-├── backend/
-│   ├── drizzle/                 # Auto-generated SQL migrations
-│   ├── data/                    # SQLite database file (gitignored)
-│   ├── src/
-│   │   ├── db/
-│   │   │   ├── schema.ts        # Drizzle table definitions (source of truth)
-│   │   │   └── index.ts         # libSQL client + drizzle instance
-│   │   ├── middleware/
-│   │   │   └── auth.ts          # parseAuth — sets req.guestToken from Bearer header
-│   │   ├── routes/
-│   │   │   ├── divisions.ts     # CRUD + participants (with PATCH alias) + GET /settlement
-│   │   │   ├── expenses.ts      # POST/DELETE on /divisions/:id/expenses
-│   │   │   └── categories.ts    # GET /categories (seeded, kept for future use)
-│   │   ├── services/
-│   │   │   └── settlement.ts    # computeBalances + computeSettlement (greedy debt minimization)
-│   │   └── index.ts             # Express app, migrations on startup, category seed
-│   └── drizzle.config.ts
-└── frontend/
-    └── src/
-        ├── api/index.ts         # Axios instance + typed API wrappers + shared TS types
-        ├── stores/
-        │   ├── auth.ts          # Guest session (6h localStorage TTL)
-        │   └── division.ts      # Active division state + all mutations
-        ├── views/
-        │   ├── HomeView.vue     # Landing + create division form
-        │   ├── DivisionView.vue # Single-screen: participant cards with inline expense forms
-        │   └── ResultView.vue   # Settlement + alias display + WhatsApp copy button
-        └── components/
-            └── ParticipantCard.vue  # Collapsible card: alias field + inline expense form + exclusions
+├── app.vue                      # Root — restores guest session on mount
+├── nuxt.config.ts               # ssr: false, @pinia/nuxt, global CSS
+├── drizzle.config.ts            # Points to server/db/schema.ts
+├── drizzle/                     # Auto-generated SQL migrations
+├── assets/main.css              # Design system tokens + global styles
+├── types/index.ts               # Shared TypeScript interfaces
+├── stores/
+│   ├── auth.ts                  # Guest session (6h localStorage TTL)
+│   └── division.ts              # Active division state + $fetch mutations
+├── pages/
+│   ├── index.vue                # Landing + create division form
+│   └── division/[id]/
+│       ├── index.vue            # Participant cards + inline expense forms
+│       └── result.vue           # Settlement + alias + WhatsApp copy
+├── components/
+│   └── ParticipantCard.vue      # Collapsible: alias + expense form + exclusions
+└── server/
+    ├── middleware/auth.ts       # Sets event.context.guestToken
+    ├── utils/getDivision.ts     # Ownership check helper (auto-imported)
+    ├── db/
+    │   ├── schema.ts            # Drizzle table definitions (source of truth)
+    │   └── index.ts             # libSQL client + drizzle instance
+    ├── services/
+    │   └── settlement.ts        # computeBalances + computeSettlement
+    └── api/
+        ├── health.get.ts
+        ├── categories.get.ts
+        └── divisions/
+            ├── index.post.ts
+            └── [id]/
+                ├── index.get.ts / index.patch.ts / index.delete.ts
+                ├── settlement.get.ts
+                ├── participants/
+                │   ├── index.post.ts
+                │   └── [pid]/ index.patch.ts / index.delete.ts
+                └── expenses/
+                    ├── index.post.ts
+                    └── [eid].delete.ts
 ```
 
 ## Authentication
 
-Guest-only. `parseAuth` middleware reads `Authorization: Bearer guest_<uuid>` and sets `req.guestToken`.
+Guest-only. Server middleware (`server/middleware/auth.ts`) reads `Authorization: Bearer guest_<uuid>` and sets `event.context.guestToken`.
 
 - Token generated client-side (`crypto.randomUUID()`), stored in localStorage with 6h TTL.
 - Divisions store `guestToken` to scope access. No server-side session table.
+- Stores attach token via `authHeaders()` helper on every `$fetch` call.
 
 ## Key Design Decisions
 
-### Expenses — no categories, just description + alias
-- Each expense has a `description` (free text, optional) and `amount`
-- Categories were removed from the UI. The `categories` table still exists in DB for future use.
-- **Alias** is a per-participant field (not per-expense). It stores the CBU alias for receiving transfers. Set inline in the participant card, saved on blur via `PATCH /api/divisions/:id/participants/:pid`.
+### API calls — `$fetch` not axios
+All API calls use Nuxt's global `$fetch` (ofetch). Error format: `e.data?.statusMessage`.
+The `authHeaders()` function in `stores/division.ts` injects the guest token.
+
+### Expenses — description + alias only
+Each expense has `description` (optional) and `amount`. No categories in UI.
+**Alias** is per-participant, saved on blur via `PATCH /api/divisions/:id/participants/:pid`.
 
 ### Expense splits
-`expense_splits` table stores only included participants. Excluded participants have no row. `amountOwed = expense.amount / included_count` (pre-calculated, equal split).
+`expense_splits` stores only included participants. `amountOwed = expense.amount / included_count`.
 
-### Debt minimization (`services/settlement.ts`)
-1. Net balance per participant: `total_paid − total_owed`
-2. Separate into creditors (net > 0) and debtors (net < 0)
-3. Greedy match: largest creditor ↔ largest debtor, record transfer, repeat
-4. Result: minimum (or near-minimum) number of transfers
+### Debt minimization (`server/services/settlement.ts`)
+1. Net balance = `total_paid − total_owed`
+2. Greedy: largest creditor ↔ largest debtor, repeat
+3. Result: minimum (or near-minimum) transfers
 
-### Critical bug fix — always use `inArray()` for multi-expense queries
-The old `reduce` with `or()` from Drizzle caused only the first expense's splits to be fetched. Always use:
+### Critical — always use `inArray()` for multi-expense queries
 ```typescript
 import { inArray } from 'drizzle-orm'
 db.select().from(expenseSplits).where(inArray(expenseSplits.expenseId, expenseIds))
 ```
 
 ### WhatsApp copy
-`ResultView.vue` generates bold-formatted text (`*text*`) with transfer list and creditor aliases. Uses `navigator.clipboard.writeText()`. Button shows "✓ Copiado" feedback for 2.5s.
+`pages/division/[id]/result.vue` generates `*bold*` formatted text with transfers and aliases.
 
 ## Design System — "The Ledger"
 
-Dark forest green (`#0F1C17`), warm cream text (`#EDE8D8`), gold accents (`#D4A84B`), red/green for debt/credit. Fonts: Cormorant Garamond (display), DM Sans (body), DM Mono (numbers/labels/code). All tokens in `frontend/src/assets/main.css`.
+Dark forest green (`#0F1C17`), warm cream text (`#EDE8D8`), gold accents (`#D4A84B`). Fonts: Cormorant Garamond (display), DM Sans (body), DM Mono (numbers). Tokens in `assets/main.css`.
 
 ## Deploy
 
-- **Frontend**: Vercel — https://frontend-opal-nine-49.vercel.app
-- **Backend**: Render — https://expense-splitter-4ry1.onrender.com
+- **App**: Vercel (Nuxt 3 auto-detected) — build command: `npm run db:migrate && nuxt build`
 - **DB**: Turso (libSQL cloud)
+- Env vars needed on Vercel: `DATABASE_URL`, `TURSO_AUTH_TOKEN`
