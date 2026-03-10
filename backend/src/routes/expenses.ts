@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import { Router, Request } from 'express'
 import { z } from 'zod'
 import { randomUUID } from 'crypto'
 import { db } from '../db/index.js'
@@ -19,7 +19,7 @@ async function getDivision(id: string, req: { auth?: { userId: string }; guestTo
 
 // POST /api/divisions/:id/expenses
 // Body: { description, amount, categoryId, paidBy (participantId), includedParticipantIds[] }
-router.post('/', async (req, res) => {
+router.post('/', async (req: Request<{ id: string }>, res) => {
   const division = await getDivision(req.params.id, req)
   if (!division) {
     res.status(404).json({ error: 'División no encontrada' })
@@ -97,7 +97,7 @@ router.post('/', async (req, res) => {
 })
 
 // DELETE /api/divisions/:id/expenses/:eid
-router.delete('/:eid', async (req, res) => {
+router.delete('/:eid', async (req: Request<{ id: string; eid: string }>, res) => {
   const division = await getDivision(req.params.id, req)
   if (!division) {
     res.status(404).json({ error: 'División no encontrada' })
