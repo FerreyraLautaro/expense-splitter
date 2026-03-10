@@ -1,5 +1,9 @@
 node_modules/
 dist/
+.nuxt/
+.output/
+data/
 *.png
 *.jpg
 .playwright-mcp/
+.env
