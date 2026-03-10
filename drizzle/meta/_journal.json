@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1773081773772,
-      "tag": "0000_goofy_star_brand",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1773085109417,
-      "tag": "0001_absurd_swarm",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1773177824039,
-      "tag": "0002_lush_nicolaos",
+      "when": 1773180466083,
+      "tag": "0000_last_mandrill",
       "breakpoints": true
     }
   ]
