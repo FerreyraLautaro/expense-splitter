@@ -263,14 +263,20 @@ const formatAmount = (n: number) => `$${Math.abs(n).toFixed(2)}`
 
 /* Actions */
 .result-actions {
-  display: flex; gap: 12px; justify-content: flex-end;
+  display: flex; gap: 12px; justify-content: flex-end; flex-wrap: wrap;
   padding-top: 16px; border-top: 1px solid var(--border);
 }
 
 @media (max-width: 480px) {
-  .transfer-card { grid-template-columns: 1fr; text-align: center; }
-  .transfer-to { text-align: center; }
+  .result-header  { padding: 20px 0 32px; }
+  .section-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .btn-copy       { width: 100%; justify-content: center; }
+  .transfer-card  { grid-template-columns: 1fr; text-align: center; gap: 10px; padding: 16px; }
+  .transfer-to    { text-align: center; }
+  .transfer-arrow { flex-direction: row; gap: 8px; justify-content: center; }
+  .result-title-row { gap: 10px; margin-bottom: 28px; }
   .result-actions { flex-direction: column; }
-  .result-actions .btn { width: 100%; }
+  .result-actions .btn { width: 100%; text-align: center; justify-content: center; }
+  .balances-grid  { grid-template-columns: 1fr; }
 }
 </style>

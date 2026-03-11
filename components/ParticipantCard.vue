@@ -277,7 +277,15 @@ const totalPaid = computed(() => props.expenses.reduce((s, e) => s + e.amount, 0
 }
 .p-chevron.rotated { transform: rotate(90deg); color: var(--accent); }
 
-.p-name { font-size: 16px; font-weight: 500; flex-shrink: 0; }
+.p-name {
+  font-size: 16px;
+  font-weight: 500;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .p-alias {
   font-size: 12px;
@@ -285,6 +293,11 @@ const totalPaid = computed(() => props.expenses.reduce((s, e) => s + e.amount, 0
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 2px 8px;
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 130px;
 }
 
 .p-expense-count { font-size: 11px; padding: 3px 8px; }
@@ -438,7 +451,25 @@ const totalPaid = computed(() => props.expenses.reduce((s, e) => s + e.amount, 0
 .empty-hint { text-align: center; padding: 8px 0; }
 
 @media (max-width: 520px) {
+  .p-header     { padding: 14px 14px; }
+  .p-body       { padding: 14px; gap: 12px; }
+  .p-header-left { flex-wrap: wrap; gap: 6px; }
+  .p-expense-count { flex-shrink: 0; }
+
+  /* Increase touch targets for icon buttons */
+  .btn-icon { width: 36px; height: 36px; }
+
+  /* Stack alias row */
+  .alias-row   { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .alias-input { width: 100%; }
+
+  .add-form     { padding: 12px; }
   .add-form-row { flex-direction: column; }
   .amount-input { width: 100%; }
+
+  /* Footer stacks cancel/save below preview */
+  .add-form-footer { flex-direction: column; align-items: stretch; gap: 10px; }
+  .add-actions     { margin-left: 0; justify-content: flex-end; }
+  .split-preview   { text-align: center; }
 }
 </style>

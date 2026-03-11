@@ -221,7 +221,11 @@ function start() {
 }
 
 @media (max-width: 520px) {
+  .header { padding: 20px 0 36px; }
+  .hero   { padding-bottom: 40px; }
+  .hero-sub { font-size: 15px; }
   .create-input-wrap { flex-direction: column; }
   .create-input-wrap .btn { width: 100%; }
+  .step { gap: 16px; }
 }
 </style>

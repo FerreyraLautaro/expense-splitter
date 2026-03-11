@@ -224,3 +224,10 @@ input::placeholder { color: var(--text-muted); }
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+/* ─── Mobile responsive ──────────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .page    { padding: 20px 0 56px; }
+  .container { padding: 0 16px; }
+  .card    { padding: 16px; }
+}

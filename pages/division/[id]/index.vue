@@ -236,6 +236,10 @@ function goToResult() {
 }
 
 @media (max-width: 480px) {
-  .input-row { flex-direction: column; }
+  .div-header  { padding: 20px 0 28px; }
+  .summary-bar { padding: 14px 12px; }
+  .summary-item .accent { font-size: 15px; }
+  .input-row   { flex-direction: column; }
+  .input-row .btn { width: 100%; }
 }
 </style>
