@@ -464,7 +464,7 @@ const totalPaid = computed(() => props.expenses.reduce((s, e) => s + e.amount, 0
   .alias-input { width: 100%; }
 
   .add-form     { padding: 12px; }
-  .add-form-row { flex-direction: column; }
+  .add-form-row { flex-direction: column; align-items: stretch; }
   .amount-input { width: 100%; }
 
   /* Footer stacks cancel/save below preview */

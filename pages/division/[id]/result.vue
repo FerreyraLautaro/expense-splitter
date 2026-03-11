@@ -271,9 +271,9 @@ const formatAmount = (n: number) => `$${Math.abs(n).toFixed(2)}`
   .result-header  { padding: 20px 0 32px; }
   .section-header { flex-direction: column; align-items: flex-start; gap: 10px; }
   .btn-copy       { width: 100%; justify-content: center; }
-  .transfer-card  { grid-template-columns: 1fr; text-align: center; gap: 10px; padding: 16px; }
-  .transfer-to    { text-align: center; }
-  .transfer-arrow { flex-direction: row; gap: 8px; justify-content: center; }
+  .transfer-card  { gap: 8px; padding: 14px 16px; }
+  .t-name         { font-size: 15px; }
+  .t-amount       { font-size: 14px; }
   .result-title-row { gap: 10px; margin-bottom: 28px; }
   .result-actions { flex-direction: column; }
   .result-actions .btn { width: 100%; text-align: center; justify-content: center; }
